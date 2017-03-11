@@ -17,18 +17,55 @@ float a = 0;
 //the math over and over
 float[] depthLookUp = new float[2048];
 
-float depthCutoff = 2048;
+float depthCutoff = 1250;
+int zValue = 0;
+int zStep = 10;
+int zAcceleration = -16;
+PVector[] kPoints;
+int numP = 0;
+
+int refreshTime = 2000;
+int lastTime = 0;
+int timeElapsed = 0;
+
+float aSpeed = 0.015f;
+
+// We're just going to calculate and draw every 4th pixel (equivalent of 160x120)
+  int skip = 8;
 
 void setup() {
   // Rendering in P3D
   size(800, 600, P3D);
   kinect = new Kinect(this);
   kinect.initDepth();
+  
+  
 
   // Lookup table for all possible depth values (0 - 2047)
   for (int i = 0; i < depthLookUp.length; i++) {
     depthLookUp[i] = rawDepthToMeters(i);
   }
+  
+  //Capture moment
+  int[] depth = kinect.getRawDepth();
+
+    kPoints = new PVector[depth.length];
+    
+    int numP = 0;
+    for (int x = 0; x < kinect.width; x += skip) {
+      for (int y = 0; y < kinect.height; y += skip) {
+        
+        int offset = x + y*kinect.width;
+
+        // Convert kinect data to world xyz coordinate
+        int rawDepth = depth[offset];
+      
+        PVector k = new PVector(x, y, rawDepth);
+        kPoints = (PVector[])append(kPoints, k);
+        //numP++;
+        //print("Number of points: " + numP);
+      }
+    }
 }
 
 void mousePressed() {
@@ -44,13 +81,11 @@ void keyPressed()
 
 void draw() {
 
-  background(0);
+  
+ 
 
   // Get the raw depth as array of integers
   int[] depth = kinect.getRawDepth();
-
-  // We're just going to calculate and draw every 4th pixel (equivalent of 160x120)
-  int skip = 8;
 
   // Translate and rotate
   translate(width/2, height/2, -50);
@@ -58,39 +93,76 @@ void draw() {
   
   PVector lastPoint = new PVector();
   PVector thisPoint;
-  for (int x = 0; x < kinect.width; x += skip) {
-    for (int y = 0; y < kinect.height; y += skip) {
-      int offset = x + y*kinect.width;
+  
+ 
+  if(depth.length == 0)return;
+  
+  zValue+=zStep;
+  //if(zStep > -2*zAcceleration){zStep += zAcceleration;}
+  
+  int delta = millis()-lastTime;
+  timeElapsed += delta;
+  if(zValue > depthCutoff)
+  {
+    timeElapsed = 0;
+    zValue = 0;
+    
+    //Capture moment
+   
+    kPoints = new PVector[depth.length];
+   
+    numP=0;
+    for (int x = 0; x < kinect.width; x += skip) {
+      for (int y = 0; y < kinect.height; y += skip) {
+        
+        int offset = x + y*kinect.width;
+
+        // Convert kinect data to world xyz coordinate
+        int rawDepth = depth[offset];
+      
+        PVector k = new PVector(x, y, rawDepth);
+        kPoints[numP] = k;
+        numP++;
+        //print("Number of points: " + numP);
+      }
+    }
+    
+    aSpeed = 0.005 + random(0.015);
+    a = random(PI*2);
+     background(255);
+  }else{
+     background(0);
+  }
+ 
+ 
+  for (int i = 0; i < numP; i++) {
+    PVector k = kPoints[i];
+    
+      //int offset = x + y*kinect.width;p
 
       // Convert kinect data to world xyz coordinate
-      int rawDepth = depth[offset];
+      //int rawDepth = depth[offset];
       
-      if(rawDepth < depthCutoff)
+      if(k.z < depthCutoff)
       {
-        PVector v = depthToWorld(x, y, rawDepth);
-
-      stroke(255);
-      pushMatrix();
-      // Scale up by 200
-      float factor = 400;
-      //translate(v.x*factor, v.y*factor, factor-v.z*factor);
-      // Draw a point
-      thisPoint = new PVector(v.x*factor, v.y*factor, factor-v.z*factor);
-      point(thisPoint.x, thisPoint.y, thisPoint.z);
-      
-      if(lastPoint.x != 0)
-      {
-        line( lastPoint.x, lastPoint.y, lastPoint.z, thisPoint.x, thisPoint.y, thisPoint.z);
-      }
-      lastPoint = thisPoint;  
-      popMatrix();
+        PVector v = depthToWorld((int)k.x, (int)k.y, (k.z < zValue)?(int)k.z:(int)zValue);
+        
+        stroke(255);
+        pushMatrix();
+        // Scale up by 200
+        float factor = 450;
+        //translate(v.x*factor, v.y*factor, factor-v.z*factor);
+        // Draw a point
+        thisPoint = new PVector(v.x*factor, v.y*factor, factor-v.z*factor);
+        point(thisPoint.x, thisPoint.y, thisPoint.z);
+        
+        popMatrix();
       }
       
-    }
   }
 
   // Rotate
-  a += 0.016f;
+  a += aSpeed;
 }
 
 // These functions come from: http://graphics.stanford.edu/~mdfisher/Kinect.html
