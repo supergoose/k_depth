@@ -29,6 +29,11 @@ void setup() {
   }
 }
 
+void mousePressed() {
+    kinect = new Kinect(this);
+    kinect.initDepth();
+ }
+
 void draw() {
 
   background(0);
@@ -37,7 +42,7 @@ void draw() {
   int[] depth = kinect.getRawDepth();
 
   // We're just going to calculate and draw every 4th pixel (equivalent of 160x120)
-  int skip = 16;
+  int skip = 8;
 
   // Translate and rotate
   translate(width/2, height/2, -50);
@@ -51,7 +56,10 @@ void draw() {
 
       // Convert kinect data to world xyz coordinate
       int rawDepth = depth[offset];
-      PVector v = depthToWorld(x, y, rawDepth);
+      
+      if(rawDepth < 1000)
+      {
+        PVector v = depthToWorld(x, y, rawDepth);
 
       stroke(255);
       pushMatrix();
@@ -68,11 +76,13 @@ void draw() {
       }
       lastPoint = thisPoint;  
       popMatrix();
+      }
+      
     }
   }
 
   // Rotate
-  a += 0.01f;
+  a += 0.016f;
 }
 
 // These functions come from: http://graphics.stanford.edu/~mdfisher/Kinect.html
