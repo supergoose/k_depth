@@ -17,6 +17,8 @@ float a = 0;
 //the math over and over
 float[] depthLookUp = new float[2048];
 
+float depthCutoff = 2048;
+
 void setup() {
   // Rendering in P3D
   size(800, 600, P3D);
@@ -33,6 +35,12 @@ void mousePressed() {
     kinect = new Kinect(this);
     kinect.initDepth();
  }
+ 
+void keyPressed()
+{
+    depthCutoff = 500.0f + (float(key)-48.0f) * 150.0f;
+   print("Depth cutoff: " + depthCutoff);
+}
 
 void draw() {
 
@@ -57,7 +65,7 @@ void draw() {
       // Convert kinect data to world xyz coordinate
       int rawDepth = depth[offset];
       
-      if(rawDepth < 1000)
+      if(rawDepth < depthCutoff)
       {
         PVector v = depthToWorld(x, y, rawDepth);
 
